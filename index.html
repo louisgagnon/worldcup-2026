@@ -36,6 +36,7 @@
     .tab{flex-shrink:0;background:transparent;border:1px solid var(--border);color:var(--text2);padding:7px 15px;border-radius:8px;cursor:pointer;font-size:.78rem;font-family:inherit;transition:all .18s;display:flex;align-items:center;gap:5px}
     .tab:hover{background:var(--card2);color:var(--text)}
     .tab.active{background:var(--card2);border-color:var(--gold);color:var(--gold);font-weight:600}
+    .tab.pending{opacity:.45}
     .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:livepulse 1.5s ease-in-out infinite}
     main{position:relative;z-index:1;padding:20px;max-width:1440px;margin:0 auto}
     .view-toggle{display:flex;gap:6px;margin-bottom:18px}
@@ -163,9 +164,7 @@ const realTeam=c=>{
 function fmtDate(iso){try{const d=new Date(iso);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}catch{return ''}}
 function detectRound(ev){
   const comp=ev.competitions?.[0];
-  // Exclude group stage by notes
   if(comp?.notes?.length){for(const n of comp.notes){const txt=(n.headline||n.text||'').toLowerCase();if(txt.includes('group'))return 'Other'}}
-  // Date-based detection is primary — ESPN's round labels are inconsistent
   const d=new Date(ev.date),m=d.getMonth()+1,day=d.getDate();
   if((m===6&&day>=28)||(m===7&&day<=4))return 'Round of 32';
   if(m===7&&day<=9)return 'Round of 16';
@@ -173,7 +172,6 @@ function detectRound(ev){
   if(m===7&&day<=16)return 'Semifinals';
   if(m===7&&day<=18)return 'Third Place';
   if(m===7&&day>=19)return 'Final';
-  // ESPN label fallback for dates outside the known window
   if(comp?.notes?.length){for(const n of comp.notes){const txt=(n.headline||n.text||'').toLowerCase();for(const[k,v]of Object.entries(ROUND_KEYS))if(txt.includes(k))return v}}
   const name=(ev.name||ev.shortName||'').toLowerCase();
   for(const[k,v]of Object.entries(ROUND_KEYS))if(name.includes(k))return v;
@@ -190,7 +188,7 @@ function process(evts){
   for(const ev of evts){
     const comp=ev.competitions?.[0];if(!comp)continue;
     const[t1,t2]=getTeams(comp);
-    if(!realTeam(t1)||!realTeam(t2))continue; // skip placeholders (TBD, id=0, or "X Winner/Loser" names)
+    if(!realTeam(t1)||!realTeam(t2))continue;
     const round=detectRound(ev);
     (roundMap[round]??=[]).push(ev);
     if(comp.status?.type?.state==='in')hasLive=true;
@@ -203,7 +201,7 @@ function bestRound(){
   for(const r of ROUND_ORDER)if(roundMap[r]?.some(e=>e.competitions?.[0]?.status?.type?.state==='in'))return r;
   const now=Date.now();for(const r of ROUND_ORDER)if(roundMap[r]?.some(e=>new Date(e.date)>now&&e.competitions?.[0]?.status?.type?.state==='pre'))return r;
   for(let i=ROUND_ORDER.length-1;i>=0;i--)if(roundMap[ROUND_ORDER[i]]?.length)return ROUND_ORDER[i];
-  return Object.keys(roundMap)[0]??null;
+  return ROUND_ORDER[0];
 }
 async function load(showSpinner=true){
   if(showSpinner)setContent('<div class="state-box"><div class="spinner"></div><span>Loading…</span></div>');
@@ -215,15 +213,22 @@ function setContent(html){document.getElementById('content').innerHTML=html}
 function setRefreshing(on){document.getElementById('refreshBtn').classList.toggle('spinning',on)}
 function render(){renderTabs();view==='cards'?renderCards():renderBracket()}
 function renderTabs(){
-  const bar=document.getElementById('tabsBar');const rounds=ROUND_ORDER.filter(r=>roundMap[r]);
-  if(!rounds.length){bar.innerHTML='';return}
-  bar.innerHTML=rounds.map(r=>{const live=roundMap[r].some(e=>e.competitions?.[0]?.status?.type?.state==='in');return `<button class="tab${r===activeRound?' active':''}" onclick="selectRound('${h(r)}')">${h(r)}${live?'<span class="live-dot"></span>':''}</button>`}).join('');
+  const bar=document.getElementById('tabsBar');
+  bar.innerHTML=ROUND_ORDER.map(r=>{
+    const hasGames=!!roundMap[r];
+    const live=hasGames&&roundMap[r].some(e=>e.competitions?.[0]?.status?.type?.state==='in');
+    return `<button class="tab${r===activeRound?' active':''}${hasGames?'':' pending'}" onclick="selectRound('${h(r)}')">${h(r)}${live?'<span class="live-dot"></span>':''}</button>`;
+  }).join('');
 }
 function selectRound(r){activeRound=r;render()}
 function switchView(v){view=v;document.getElementById('btnCards').classList.toggle('active',v==='cards');document.getElementById('btnBracket').classList.toggle('active',v==='bracket');render()}
 function renderCards(){
   const evts=activeRound?(roundMap[activeRound]??[]):[];
-  if(!evts.length){setContent('<div class="state-box"><h2>No matches yet</h2><p>Knockout stage data will appear here once matches are scheduled.</p></div>');return}
+  if(!evts.length){
+    const prev=ROUND_ORDER[ROUND_ORDER.indexOf(activeRound)-1]??'earlier rounds';
+    setContent(`<div class="state-box"><h2>Matches not yet confirmed</h2><p>Teams advance here once ${h(prev)} are complete.</p></div>`);
+    return;
+  }
   setContent(`<div class="cards-grid">${evts.map(matchCard).join('')}</div>`);
 }
 function matchCard(ev){
