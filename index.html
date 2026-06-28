@@ -152,6 +152,7 @@ const FLAGS={'United States':'🇺🇸','USA':'🇺🇸','Mexico':'🇲🇽','Ca
 let events=[],roundMap={},activeRound=null,view='cards',refreshTmr=null,hasLive=false,activeSlug=SLUGS[0];
 const h=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const flag=name=>FLAGS[name]??'';
+const realTeam=c=>{const id=String(c?.team?.id??'');return id.length>0&&id!=='0';};
 function fmtDate(iso){try{const d=new Date(iso);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}catch{return ''}}
 function detectRound(ev){
   const comp=ev.competitions?.[0];
@@ -183,7 +184,7 @@ function process(evts){
   for(const ev of evts){
     const comp=ev.competitions?.[0];if(!comp)continue;
     const[t1,t2]=getTeams(comp);
-    if(!t1?.team?.id||!t2?.team?.id)continue; // skip any match where either team is TBD
+    if(!realTeam(t1)||!realTeam(t2))continue; // skip any match where either team is TBD/placeholder
     const round=detectRound(ev);
     (roundMap[round]??=[]).push(ev);
     if(comp.status?.type?.state==='in')hasLive=true;
