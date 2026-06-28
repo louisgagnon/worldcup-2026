@@ -152,14 +152,13 @@ const FLAGS={'United States':'🇺🇸','USA':'🇺🇸','Mexico':'🇲🇽','Ca
 let events=[],roundMap={},activeRound=null,view='cards',refreshTmr=null,hasLive=false,activeSlug=SLUGS[0];
 const h=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const flag=name=>FLAGS[name]??'';
-const realTeam=c=>{const id=String(c?.team?.id??'');return id.length>0&&id!=='0';};
+const realTeam=c=>{const id=c?.team?.id;if(!id||String(id)==='0')return false;const nm=(c?.team?.displayName||c?.team?.name||'').trim();return nm.length>0&&nm.toLowerCase()!=='tbd';};
 function fmtDate(iso){try{const d=new Date(iso);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}catch{return ''}}
+function getEspnLabel(comp){if(comp?.notes?.length){for(const n of comp.notes){const t=(n.headline||n.text||'').toLowerCase();for(const[k,v]of Object.entries(ROUND_KEYS))if(t.includes(k))return v}}return null}
 function detectRound(ev){
   const comp=ev.competitions?.[0];
-  // Exclude group stage
+  // Exclude group stage by notes
   if(comp?.notes?.length){for(const n of comp.notes){const txt=(n.headline||n.text||'').toLowerCase();if(txt.includes('group'))return 'Other'}}
-  const name=(ev.name||ev.shortName||'').toLowerCase();
-  if(name.includes('group'))return 'Other';
   // Date-based detection is primary — ESPN's round labels are inconsistent
   const d=new Date(ev.date),m=d.getMonth()+1,day=d.getDate();
   if((m===6&&day>=28)||(m===7&&day<=4))return 'Round of 32';
@@ -168,8 +167,9 @@ function detectRound(ev){
   if(m===7&&day<=16)return 'Semifinals';
   if(m===7&&day<=18)return 'Third Place';
   if(m===7&&day>=19)return 'Final';
-  // ESPN label fallback for anything outside the date window
-  if(comp?.notes?.length){for(const n of comp.notes){const txt=(n.headline||n.text||'').toLowerCase();for(const[k,v]of Object.entries(ROUND_KEYS))if(txt.includes(k))return v}}
+  // ESPN label fallback for dates outside the known window
+  const espn=getEspnLabel(comp);if(espn)return espn;
+  const name=(ev.name||ev.shortName||'').toLowerCase();
   for(const[k,v]of Object.entries(ROUND_KEYS))if(name.includes(k))return v;
   return 'Other';
 }
@@ -181,14 +181,21 @@ async function loadEvents(){
 }
 function process(evts){
   roundMap={};hasLive=false;
+  console.group('ESPN event round assignments');
   for(const ev of evts){
     const comp=ev.competitions?.[0];if(!comp)continue;
     const[t1,t2]=getTeams(comp);
-    if(!realTeam(t1)||!realTeam(t2))continue; // skip any match where either team is TBD/placeholder
+    const t1id=t1?.team?.id,t2id=t2?.team?.id;
+    const t1name=t1?.team?.displayName||'',t2name=t2?.team?.displayName||'';
+    const pass1=realTeam(t1),pass2=realTeam(t2);
     const round=detectRound(ev);
+    const espnLabel=getEspnLabel(comp);
+    console.log({name:ev.name,date:ev.date,round,espnLabel,t1:{id:t1id,name:t1name,pass:pass1},t2:{id:t2id,name:t2name,pass:pass2},filtered:!pass1||!pass2});
+    if(!pass1||!pass2)continue;
     (roundMap[round]??=[]).push(ev);
     if(comp.status?.type?.state==='in')hasLive=true;
   }
+  console.groupEnd();
   for(const r of Object.keys(roundMap))roundMap[r].sort((a,b)=>new Date(a.date)-new Date(b.date));
   if(!activeRound||!roundMap[activeRound])activeRound=bestRound();
   document.getElementById('livePill').style.display=hasLive?'':'none';
