@@ -1,0 +1,211 @@
+/* ── Reset & Tokens ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0a0e1a;
+  --surface:   #121828;
+  --card:      #1a2236;
+  --border:    #2a3550;
+  --gold:      #f5c518;
+  --gold-dim:  #a88a10;
+  --text:      #e8ecf4;
+  --text-muted:#7a8aaa;
+  --green:     #22c55e;
+  --red:       #ef4444;
+  --upcoming:  #3b82f6;
+}
+
+/* ── Base ── */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-bottom: 2px solid var(--gold);
+  padding: 1.5rem 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.trophy { font-size: 2.5rem; }
+
+h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--gold), #fff 60%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Main ── */
+main {
+  flex: 1;
+  padding: 2rem 1rem;
+  overflow-x: auto;
+}
+
+/* ── Bracket ── */
+.bracket {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  align-items: flex-start;
+  min-width: max-content;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* ── Round ── */
+.round {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 220px;
+}
+
+.round-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+
+.matches {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* ── Match ── */
+.match {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.1s;
+}
+
+.match:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.match.completed { border-left: 3px solid var(--green); }
+.match.upcoming  { border-left: 3px solid var(--upcoming); }
+
+/* ── Team Row ── */
+.team {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.team:last-child { border-bottom: none; }
+
+.team.winner {
+  background: rgba(245, 197, 24, 0.07);
+  font-weight: 700;
+}
+
+.team.winner .team-name { color: var(--gold); }
+
+.team.loser {
+  opacity: 0.45;
+}
+
+.flag {
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.team-name {
+  flex: 1;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.score {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--gold);
+  min-width: 1.4rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Round-specific widths ── */
+.round-3 { min-width: 210px; }  /* QF */
+.round-4 { min-width: 210px; }  /* SF */
+.round-5,
+.round-third { min-width: 210px; }
+
+/* ── Third Place ── */
+.round-third {
+  border-left: 2px solid var(--border);
+  padding-left: 1rem;
+  align-self: flex-end;
+  margin-top: auto;
+}
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 1.2rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  letter-spacing: 0.06em;
+}
+
+/* ── Legend ── */
+.bracket::after {
+  content: "";
+  display: none;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar       { height: 6px; width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  h1       { font-size: 1.1rem; }
+  .trophy  { font-size: 1.8rem; }
+  .bracket { gap: 1rem; }
+  .round   { min-width: 175px; }
+}
